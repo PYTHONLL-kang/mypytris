@@ -24,6 +24,7 @@ clock = p.time.Clock()
 
 def draw_rect(x, y, color):
     # print(x,y)
+
     p.draw.rect(screen, color, [x, y, 25, 25], 1)
 
 
@@ -36,8 +37,6 @@ def draw_line(): # 충돌부분 만들게 Ok
     for abcd in ran:
         p.draw.line(screen, white, (442-15, (52*abcd)+(10*abcd)), (640, (52*abcd)+(10*abcd)), 1)
         abcd = abcd + 1
-
-
 
 class Block:
     def __init__(self, X, Y, position, shape, color):
@@ -73,8 +72,6 @@ class Block:
             dict_object.append({"x": shape["x"] + self.X, "y": shape["y"] + self.Y, "color": self.color})
 
         return dict_object
-    
-
 
 class BlockJ(Block):
     def __init__(self, x, y, position):
@@ -173,6 +170,7 @@ class BlockI(Block):
 
 class Bag:
     def __init__(self):
+        """
         self.bag = [
             BlockI(0, 0, 0), 
             BlockJ(0, 0, 0), 
@@ -182,6 +180,8 @@ class Bag:
             BlockT(0, 0, 0), 
             BlockZ(0, 0, 0)
         ]
+        """
+        self.bag = [BlockT(0, 0, 0), BlockO(0, 0, 0)]
 
     def pop_(self):
         if len(self.bag) == 0:
@@ -192,38 +192,6 @@ class Bag:
         return result
 
 
-class Objects:
-    def __init__(self):
-        self.objects = {}
-
-    def add(self, blocks):
-        for block in blocks.to_dict():
-            blockY = str(block["y"])
-            try:
-                self.objects[blockY].append({"x" : block["x"], "color": block["color"]})
-            except KeyError:
-                self.objects[blockY] = [{"x" : block["x"], "color": block["color"]}]
-            # self.objects.append(block)
-
-    def render(self, yo):
-        for blockY in self.objects:
-            for block in self.objects[blockY]:
-                draw_rect(block["x"], int(blockY) + yo, block["color"])
-            # draw_rect(object["x"], object["y"], object["color"])
-
-    def clear_line(self):
-        for blockY in self.objects:
-            if len(self.objects[blockY]) == 10:
-                print(self.objects[blockY])
-                for block_index in range(len(self.objects[blockY])):
-                    self.objects[blockY][block_index]["x"] = -100
-
-
-"""
-def hold_block(_object):
-    hold  = _object
-    return hold
-"""
 
 def check_collide(_object, stacks, directionX = 0, directionY = 0):
     for stack in stacks:
@@ -247,6 +215,56 @@ def check_wall_collide(_object, directionX = 0, directionY = 0):
             return True
 
     return False
+
+
+
+class Objects:
+    def __init__(self):
+        self.objects = {}
+        self.delY = 0 #지워지는 줄
+        self.ya = 0 #줄 지워질 때 y축에 26(한 칸) 더하는 거 
+        # 자신.야 = 0
+
+    def add(self, blocks):
+        for block in blocks.to_dict():
+            blockY = str(block["y"])
+            try:
+                self.objects[blockY].append({"x" : block["x"], "color": block["color"]})
+            except KeyError:
+                self.objects[blockY] = [{"x" : block["x"], "color": block["color"]}]
+            # self.objects.append(block)
+
+    def render(self, stack):
+        self.stack_ = stack
+        for blockY in self.objects:
+            for block in self.objects[blockY]:
+                if self.delY <= int(blockY): #지워지는 줄보다 쌓인 줄이 더 낮게 있으면
+                    draw_rect(block["x"], int(blockY), block["color"]) #냅두고
+                else: 
+                    if not check_collide(self.objects, self.stack_, directionY=26) and not check_wall_collide: #겹치지 않으면
+                        draw_rect(block["x"], int(blockY) + 26, block["color"]) #아니면 한칸 낮추는 거
+            # draw_rect(object["x"], object["y"], object["color"])
+
+    def clear_line(self):
+        for blockY in self.objects:
+            if len(self.objects[blockY]) == 10 and self.objects[blockY][0]["x"] > 0 and self.objects[blockY][0]["x"] < 540:
+                self.ya = self.ya + 26
+                self.delY = int(blockY)
+                print("지워지는 줄: ")
+                print(self.delY)
+                #print(self.objects[blockY])
+                for block_index in range(len(self.objects[blockY])):
+                    self.objects[blockY][block_index]["x"] = -100
+
+    # def pull_down(self):
+    #     for blockY in self.objects:
+
+
+"""
+def hold_block(_object):
+    hold  = _object
+    return hold
+"""
 
 
 objects = Objects()
@@ -295,7 +313,7 @@ while not done:
         current_block.go_to()
 
         objects.clear_line()
-        objects.render(0)
+        
 
     elif check_collide(current_block, stack, directionY=26) or check_wall_collide(current_block, directionY=26) or key_event[p.K_SPACE]:
         #current_block.stop_bottom()
@@ -309,13 +327,12 @@ while not done:
         current_block.go_to()
 
         objects.clear_line()
-        objects.render(26)
 
     for event in p.event.get():
         if event.type == p.QUIT:
             done = True
 
-    objects.render(0)
+    objects.render(stack)
     current_block.render()
     
     #print(objects.objects)
