@@ -1,4 +1,5 @@
 import time
+from turtle import right
 import pygame as p
 import random
 
@@ -7,7 +8,7 @@ p.init()
 black = (0, 0, 0)
 white = (255, 255, 255)
 yellow = (255, 255, 0)
-skyblue = (0, 255, 255)
+light_blue = (0, 255, 255)
 puple = (255, 0, 255)
 blue = (30, 128, 255)
 orange = (255, 140, 0)
@@ -27,10 +28,10 @@ def draw_rect(x, y, color):
     p.draw.rect(screen, color, [x, y, 25, 25], 1)
 
 
-def draw_line():
-    p.draw.line(screen, white, (110, 0), (110, 540), 1)
-    p.draw.line(screen, white, (442-15, 0), (442-15, 540), 1)
-    p.draw.line(screen, white, (110, 540), (442-15, 540), 1)
+def draw_line(): # 충돌부분 만들게 Ok
+    p.draw.rect(screen, white, [110, 0, 1, 540], 1)
+    p.draw.rect(screen, white, [442-15, 0, 1, 540], 1)
+    p.draw.rect(screen, white, [540, 110, 317, 1], 1)
     abcd = 1
     ran = [1, 2, 3, 4, 5]
     for abcd in ran:
@@ -62,11 +63,12 @@ class Block:
         self.Y = 0
 
     def to_dict(self):
-        asdf = []
-        for shape in self.shape:
-            asdf.append(shape["x"])
+        dict_object = []
 
-        return
+        for shape in self.shape:
+            dict_object.append({"x": shape["x"] + self.X, "y": shape["y"] + self.Y})
+
+        return dict_object
     
 
 
@@ -173,7 +175,7 @@ class BlockI(Block):
             {"x": 52, "y": 0},
             {"x": 78, "y": 0}
         ])
-        self.color = skyblue
+        self.color = light_blue
         
         
 
@@ -216,6 +218,23 @@ class Objects:
             object.render()
 
 
+def check_collide(_object, stacks):
+    for stack in stacks:
+        for block in _object.to_dict():
+            block_rct = p.Rect(block["x"], block["y"], 26 ,26)
+            stack_rct = p.Rect(stack["x"], block["y"], 26, 26)
+
+            if block_rct.colliderect(stack_rct):
+                return True
+
+    return False
+
+def check_wall_collide(_object, direction):
+    for block in _object:
+        left_wall = p.Rect(110, 0, 1, 540)
+        right_wall = p.Rect(4)
+
+
 objects = Objects()
 
 bag = Bag()
@@ -249,20 +268,26 @@ while not done:
         current_block.move(0, 26)
 
 
-    if  current_y >=  485 and key_event[p.K_DOWN] or rct.colliderect():
+    if  current_y >=  485 and key_event[p.K_DOWN] or check_collide(current_block, stack) and key_event[p.K_DOWN]:
         current_block.stop_bottom()
-        start = start + 1
-        if start == 50:
-            stack.append([current_x, current_y, 26, 26])
-            objects.add(current_block)
+        #start = start + 1
+        #if start == 50:
+        
+        for block in current_block.to_dict(): # 쌓인 블럭에 데이터 추가
+            stack.append(block)
+            
+        objects.add(current_block)
 
-            current_block = bag.pop_()
-            current_block.go_to()
-            start = 0
+        current_block = bag.pop_()
+        current_block.go_to()
+        start = 0
 
     elif current_y >= 485 or key_event[p.K_SPACE]:
         current_block.stop_bottom()
-        stack.append([current_x, current_y, 26, 26])
+        
+        for block in current_block.to_dict(): # 쌓인 블럭에 데이터 추가
+            stack.append(block)
+            
         time.sleep(0.1)
         objects.add(current_block)
 
