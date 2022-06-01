@@ -1,19 +1,6 @@
 import time
-from turtle import shape
 import pygame as p
 import random
-
-"""
-해야할 거
-6월 전까지
-스핀 구현 - 월킥
-넥스트 구현
-홀드 구현
-
-방학 전까지
-멀티플레이
-쓰레기 줄
-"""
 
 p.init()
 
