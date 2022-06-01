@@ -1,5 +1,4 @@
 import time
-from turtle import right
 import pygame as p
 import random
 
@@ -9,7 +8,7 @@ black = (0, 0, 0)
 white = (255, 255, 255)
 yellow = (255, 255, 0)
 light_blue = (0, 255, 255)
-puple = (255, 0, 255)
+purple = (255, 0, 255)
 blue = (30, 128, 255)
 orange = (255, 140, 0)
 green = (0, 221, 0)
@@ -29,9 +28,9 @@ def draw_rect(x, y, color):
 
 
 def draw_line(): # 충돌부분 만들게 Ok
-    p.draw.rect(screen, white, [110, 0, 1, 540], 1)
-    p.draw.rect(screen, white, [442-15, 0, 1, 540], 1)
-    p.draw.rect(screen, white, [540, 110, 317, 1], 1)
+    p.draw.rect(screen, white, [164, 0, 1, 520], 1)
+    p.draw.rect(screen, white, [442-15, 0, 1, 520], 1)
+    p.draw.rect(screen, white, [164, 520, 264, 1], 1)
     abcd = 1
     ran = [1, 2, 3, 4, 5]
     for abcd in ran:
@@ -41,19 +40,24 @@ def draw_line(): # 충돌부분 만들게 Ok
 
 
 class Block:
-    def __init__(self, X, Y, position, shape):
+    def __init__(self, X, Y, position, shape, color):
         self.X = X
         self.Y = Y
         self.position = position
         self.shape = shape
+        self.last_decent = time.time()
+        self.decent_margin = 1
+        self.color = color
 
     def move(self, x, y):
         self.X += x
         self.Y += y
 
-        
     def render(self):
-        # print(self.X, self.Y)
+        # if time.time() - self.last_decent > self.decent_margin:
+        #     self.move(0, 26)
+        #     self.last_decent = time.time()
+
         for shape in self.shape:
             draw_rect(shape["x"] + self.X, shape["y"] + self.Y, self.color)
 
@@ -66,7 +70,7 @@ class Block:
         dict_object = []
 
         for shape in self.shape:
-            dict_object.append({"x": shape["x"] + self.X, "y": shape["y"] + self.Y})
+            dict_object.append({"x": shape["x"] + self.X, "y": shape["y"] + self.Y, "color": self.color})
 
         return dict_object
     
@@ -79,9 +83,7 @@ class BlockJ(Block):
             {"x": 26, "y": 26},
             {"x": 52, "y": 26},
             {"x": 0, "y": 0}
-        ])
-
-        self.color = blue
+        ], blue)
 
     def spin(self):
         pass
@@ -94,9 +96,7 @@ class BlockL(Block):
             {"x": 26, "y": 26},
             {"x": 52, "y": 26},
             {"x": 52, "y": 0}
-        ])
-        self.color = orange
-
+        ], orange)
 
 
     def spin(self):
@@ -109,11 +109,7 @@ class BlockT(Block):
             {"x": 26, "y": 26},
             {"x": 52, "y": 26},
             {"x": 26, "y": 0}
-        ])
-        self.color = puple
-
-
-    
+        ], purple)
 
     def spin1(self):
         self.shape = [
@@ -130,9 +126,7 @@ class BlockO(Block):
             {"x": 0, "y": 26},
             {"x": 26, "y": 26},
             {"x": 26, "y": 0}
-        ])
-        self.color = yellow
-        
+        ], yellow)
 
     def spin(self):
         pass
@@ -144,8 +138,7 @@ class BlockZ(Block):
             {"x": 26, "y": 26},
             {"x": 52, "y": 26},
             {"x": 26, "y": 0}
-        ])
-        self.color = red
+        ], red)
 
 
     def spin(self):
@@ -159,11 +152,9 @@ class BlockS(Block):
             {"x": 52, "y": 0},
             {"x": 26, "y": 26},
             {"x": 0, "y": 26}
-        ])
-        self.color = green
-        
+        ], green)
 
-   
+
     def spin(self):
         pass
 
@@ -174,11 +165,8 @@ class BlockI(Block):
             {"x": 26, "y": 0},
             {"x": 52, "y": 0},
             {"x": 78, "y": 0}
-        ])
-        self.color = light_blue
+        ], light_blue)
         
-        
-
     def spin(self):
         pass
 
@@ -199,8 +187,6 @@ class Bag:
         if len(self.bag) == 0:
             self.__init__()
             return self.pop_()
-
-        print(len(self.bag))
         result = self.bag.pop(random.randrange(0, len(self.bag)))
 
         return result
@@ -208,31 +194,59 @@ class Bag:
 
 class Objects:
     def __init__(self):
-        self.objects = []
+        self.objects = {}
 
-    def add(self, block):        
-        self.objects.append(block)
+    def add(self, blocks):
+        for block in blocks.to_dict():
+            blockY = str(block["y"])
+            try:
+                self.objects[blockY].append({"x" : block["x"], "color": block["color"]})
+            except KeyError:
+                self.objects[blockY] = [{"x" : block["x"], "color": block["color"]}]
+            # self.objects.append(block)
 
-    def render(self):
-        for object in self.objects:
-            object.render()
+    def render(self, yo):
+        for blockY in self.objects:
+            for block in self.objects[blockY]:
+                draw_rect(block["x"], int(blockY) + yo, block["color"])
+            # draw_rect(object["x"], object["y"], object["color"])
+
+    def clear_line(self):
+        for blockY in self.objects:
+            if len(self.objects[blockY]) == 10:
+                print(self.objects[blockY])
+                for block_index in range(len(self.objects[blockY])):
+                    self.objects[blockY][block_index]["x"] = -100
 
 
-def check_collide(_object, stacks):
+"""
+def hold_block(_object):
+    hold  = _object
+    return hold
+"""
+
+def check_collide(_object, stacks, directionX = 0, directionY = 0):
     for stack in stacks:
         for block in _object.to_dict():
-            block_rct = p.Rect(block["x"], block["y"], 26 ,26)
-            stack_rct = p.Rect(stack["x"], block["y"], 26, 26)
+            block_rct = p.Rect(block["x"] + directionX, block["y"] + directionY, 26 ,26)
+            stack_rct = p.Rect(stack["x"], stack["y"], 26, 26)
 
             if block_rct.colliderect(stack_rct):
                 return True
 
     return False
 
-def check_wall_collide(_object, direction):
-    for block in _object:
-        left_wall = p.Rect(110, 0, 1, 540)
-        right_wall = p.Rect(4)
+def check_wall_collide(_object, directionX = 0, directionY = 0):
+    for block in _object.to_dict():
+        block_rect = p.Rect(block["x"] + directionX, block["y"] + directionY, 26, 26)
+        left_wall = p.Rect(146, 0, 1, 520)
+        right_wall = p.Rect(442-15, 0, 1, 520)
+        bottom_wall = p.Rect(146, 520, 286, 1)
+
+        if block_rect.colliderect(left_wall) or block_rect.colliderect(right_wall) or block_rect.colliderect(bottom_wall):
+            return True
+
+    return False
 
 
 objects = Objects()
@@ -244,9 +258,10 @@ current_block.go_to()
 
 start = 0
 stack = []
+holding = 0
 
 while not done:
-    clock.tick(30)
+    clock.tick(20)
     screen.fill(black)
     
     current_x = current_block.X
@@ -254,25 +269,23 @@ while not done:
 
     rct = p.Rect(current_x, current_y, 26, 26)
 
-    current_block.move(0, 1)
+    #current_block.move(0, 15)
+    if time.time() - current_block.last_decent > current_block.decent_margin and not check_wall_collide(current_block, directionY= 26) and not check_collide(current_block, stack,  directionY= 26):
+        current_block.move(0, 26)
+        current_block.last_decent = time.time()
 
     key_event = p.key.get_pressed()
 
-    if key_event[p.K_LEFT] and current_x >= 136:
+    if key_event[p.K_LEFT] and not check_wall_collide(current_block, directionX= -26) and not check_collide(current_block, stack,  directionX= -26):
         current_block.move(-26, 0)
 
-    if key_event[p.K_RIGHT]:
-        current_block.right_wall()
+    if key_event[p.K_RIGHT] and not check_wall_collide(current_block, directionX= 26) and not check_collide(current_block, stack, directionX= 26):
+        current_block.move(26, 0) 
 
-    if key_event[p.K_DOWN]:
+    if key_event[p.K_DOWN] and not check_wall_collide(current_block, directionY= 26) and not check_collide(current_block, stack, directionY= 26):
         current_block.move(0, 26)
 
-
-    if  current_y >=  485 and key_event[p.K_DOWN] or check_collide(current_block, stack) and key_event[p.K_DOWN]:
-        current_block.stop_bottom()
-        #start = start + 1
-        #if start == 50:
-        
+    if  check_wall_collide(current_block, directionY= 26) and key_event[p.K_DOWN] or check_collide(current_block, stack, directionY= 26) and key_event[p.K_DOWN]:
         for block in current_block.to_dict(): # 쌓인 블럭에 데이터 추가
             stack.append(block)
             
@@ -280,28 +293,29 @@ while not done:
 
         current_block = bag.pop_()
         current_block.go_to()
-        start = 0
 
-    elif current_y >= 485 or key_event[p.K_SPACE]:
-        current_block.stop_bottom()
+        objects.clear_line()
+        objects.render(0)
+
+    elif check_collide(current_block, stack, directionY=26) or check_wall_collide(current_block, directionY=26) or key_event[p.K_SPACE]:
+        #current_block.stop_bottom()
         
         for block in current_block.to_dict(): # 쌓인 블럭에 데이터 추가
             stack.append(block)
-            
-        time.sleep(0.1)
+
         objects.add(current_block)
 
         current_block = bag.pop_()
         current_block.go_to()
-        start = 0
-        
-            
+
+        objects.clear_line()
+        objects.render(26)
 
     for event in p.event.get():
         if event.type == p.QUIT:
             done = True
 
-    objects.render()
+    objects.render(0)
     current_block.render()
     
     #print(objects.objects)
