@@ -240,9 +240,11 @@ class Objects:
             for block in self.objects[blockY]:
                 if self.delY <= int(blockY): #지워지는 줄보다 쌓인 줄이 더 낮게 있으면
                     draw_rect(block["x"], int(blockY), block["color"]) #냅두고
-                else: 
-                    if not check_collide(self.objects, self.stack_, directionY=26) and not check_wall_collide: #겹치지 않으면
-                        draw_rect(block["x"], int(blockY) + 26, block["color"]) #아니면 한칸 낮추는 거
+                else:
+                    for i in range(len(self.objects)):
+                        print(block)
+                        if not check_collide(block[i], self.stack_, directionY=26) and not check_wall_collide: #겹치지 않으면
+                            draw_rect(block["x"], int(blockY) + 26, block["color"]) #아니면 한칸 낮추는 거
             # draw_rect(object["x"], object["y"], object["color"])
 
     def clear_line(self):
@@ -284,6 +286,8 @@ while not done:
     
     current_x = current_block.X
     current_y = current_block.Y
+
+    print(current_block)
 
     rct = p.Rect(current_x, current_y, 26, 26)
 
