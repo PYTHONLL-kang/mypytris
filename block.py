@@ -1,335 +1,269 @@
-from inspect import stack
-from re import L
-import pygame as pg
-import time as t
-import random as rand
+from var import COLOR, BOARD_LEFT, BOARD_TOP
 
-black = (0, 0, 0)
-white = (255, 255, 255)
-yellow = (255, 255, 0)
-light_blue = (0, 255, 255)
-purple = (255, 0, 255)
-blue = (30, 128, 255)
-orange = (255, 140, 0)
-green = (0, 221, 0)
-red = (255, 0, 0)
+class Mino:
+    def __init__(self, shape, name, color, x=BOARD_LEFT + 4, y=BOARD_TOP-1):
+        self.x = x
+        self.y = y
 
-size = [640, 640]
-screen = pg.display.set_mode(size)
-
-BLOCK_SIZE = 25
-
-def return_loc(block_x, block_y, x, y):
-    return [(block_x+x)*BLOCK_SIZE, (block_y+y)*BLOCK_SIZE]
-
-class Block:
-    def __init__(self, shape, color, type):
-        self.X = 9
-        self.Y = 0
-        self.posit = 0
-        self.last_decent = t.time()
-        self.shape = shape
         self.spin = 0
+
+        self.shape = shape
+        self.name = name
         self.color = color
 
-    def go_to(self, x, y):
-        self.X = x
-        self.Y = y
+        self.counter = 0
 
-    def move(self, x_m, y_m):
-        self.X = self.X + x_m
-        self.Y = self.Y + y_m
+        self.state = [False, False, False, False, False]
 
-    def draw_mino(self, spin):
-        self.spin = spin
-        for shape in self.shape[self.spin]:
-            loc = return_loc(shape[0], shape[1], self.X, self.Y)
-            pg.draw.rect(screen, self.color, [loc[0], loc[1], BLOCK_SIZE, BLOCK_SIZE])
+    def spining(self, key):
+        self.spin += key
+        self.spin %= 4
 
-    def mino_to_block(self):
+    def move(self, x, y):
+        self.x += x
+        self.y += y
+
+    def to_object(self):
         obj = []
-
-        for shape in self.shape[self.spin]:
-            obj.append({"X" : self.X + shape[0], "Y" : self.Y + shape[1], "color": self.color})
-
+        for block in self.shape[self.spin]:
+            obj.append({'x' : self.x + block[0], 'y' : self.y + block[1], 'color' : self.color})
+        
         return obj
 
-class Block_I(Block):
+class I_mino(Mino):
     def __init__(self):
-        super().__init__(
+        shape = [
             [
-                [
-                    [0, 1],
-                    [1, 1],
-                    [2, 1],
-                    [3, 1]
-                ],
-                [
-                    [2, 0],
-                    [2, 1],
-                    [2, 2],
-                    [2, 3]
-                ],
-                [
-                    [0, 2],
-                    [1, 2],
-                    [2, 2],
-                    [3, 2]
-                ],
-                [
-                    [1, 0],
-                    [1, 1],
-                    [1, 2],
-                    [1, 3]
-                ]
-            ], color=light_blue, type='I')
-
-class Block_J(Block):
-    def __init__(self):
-        super().__init__(
+                [0, 1],
+                [1, 1],
+                [2, 1],
+                [3, 1]
+            ], 
             [
-                [
-                    [0, 0],
-                    [0, 1],
-                    [1, 1],
-                    [2, 1]
-                ],
-                [
-                    [1, 0],
-                    [2, 0],
-                    [1, 1],
-                    [1, 2]
-                ],
-                [
-                    [0, 1],
-                    [1, 1],
-                    [2, 1],
-                    [2, 2]
-                ],
-                [
-                    [1, 0],
-                    [1, 1],
-                    [0, 2],
-                    [1, 2]
-                ]
-            ], color=blue, type='J')
-
-class Block_L(Block):
-    def __init__(self):
-        super().__init__(
+                [2, 0],
+                [2, 1],
+                [2, 2],
+                [2, 3]
+            ],
             [
-                [
-                    [2, 0],
-                    [0, 1],
-                    [1, 1],
-                    [2, 1]
-                ],
-                [
-                    [1, 0],
-                    [1, 1],
-                    [1, 2],
-                    [2, 2]
-                ],
-                [
-                    [0, 1],
-                    [1, 1],
-                    [2, 1],
-                    [0, 2]
-                ],
-                [
-                    [0, 0],
-                    [1, 0],
-                    [1, 1],
-                    [1, 2]
-                ]
-            ], color=orange, type='L')
-
-class Block_O(Block):
-    def __init__(self):
-        super().__init__(
+                [0, 2],
+                [1, 2],
+                [2, 2],
+                [3, 2]
+            ],
             [
-                [
-                    [1, 0],
-                    [2, 0],
-                    [1, 1],
-                    [2, 1]
-                ],
-                [
-                    [1, 0],
-                    [2, 0],
-                    [1, 1],
-                    [2, 1]
-                ],
-                [
-                    [1, 0],
-                    [2, 0],
-                    [1, 1],
-                    [2, 1]
-                ],
-                [
-                    [1, 0],
-                    [2, 0],
-                    [1, 1],
-                    [2, 1]
-                ]
-            ], color=yellow, type='O')
-
-class Block_S(Block):
-    def __init__(self):
-        super().__init__(
-            [
-                [
-                    [1, 0],
-                    [2, 0],
-                    [0, 1],
-                    [1, 1]
-                ],
-                [
-                    [1, 0],
-                    [1, 1],
-                    [2, 1],
-                    [2, 2]
-                ],
-                [
-                    [1, 1],
-                    [2, 1],
-                    [0, 2],
-                    [1, 2]
-                ],
-                [
-                    [0, 0],
-                    [0, 1],
-                    [1, 1],
-                    [1, 2]
-                ]
-            ], color=green, type='S')
-
-class Block_T(Block):
-    def __init__(self):
-        super().__init__(
-            [
-                [
-                    [1, 0],
-                    [0, 1],
-                    [1, 1],
-                    [2, 1]
-                ],
-                [
-                    [1, 0],
-                    [1, 1],
-                    [2, 1],
-                    [1, 2]
-                ],
-                [
-                    [0, 1],
-                    [1, 1],
-                    [2, 1],
-                    [1, 2]
-                ],
-                [
-                    [1, 0],
-                    [0, 1],
-                    [1, 1],
-                    [1, 2]
-                ]
-            ], color=purple, type='T')
-
-class Block_Z(Block):
-    def __init__(self):
-        super().__init__(
-            [
-                [
-                    [0, 0],
-                    [1, 0],
-                    [1, 1],
-                    [2, 1]
-                ],
-                [
-                    [2, 0],
-                    [1, 1],
-                    [2, 1],
-                    [1, 2]
-                ],
-                [
-                    [0, 1],
-                    [1, 1],
-                    [1, 2],
-                    [2, 2]
-                ],
-                [
-                    [1, 0],
-                    [0, 1],
-                    [1, 1],
-                    [0, 2]
-                ]
-            ], color=red, type='Z')
-
-class Bag:
-    def __init__(self):
-        self.bag = [
-            Block_I(),
-            Block_J(),
-            Block_L(),
-            Block_O(),
-            Block_S(),
-            Block_T(),
-            Block_Z()
+                [1, 0],
+                [1, 1],
+                [1, 2],
+                [1, 3]
+            ]
         ]
 
-    def pop_(self):
-        if len(self.bag) == 0:
-            self.__init__()
-            return self.pop_()
+        name = 'I'
 
-        return self.bag.pop(rand.randrange(0, len(self.bag)))
+        color = COLOR['light_blue']
+        super().__init__(shape, name, color, BOARD_LEFT + 4, BOARD_TOP-2)
 
-class Hold:
+class J_mino(Mino):
     def __init__(self):
-        self.holding = None
+        shape = [
+            [
+                [0, 0],
+                [0, 1],
+                [1, 1],
+                [2, 1]
+            ],
+            [
+                [1, 0],
+                [2, 0],
+                [1, 1],
+                [1, 2]
+            ],
+            [
+                [0, 1],
+                [1, 1],
+                [2, 1],
+                [2, 2]
+            ],
+            [
+                [1, 0],
+                [1, 1],
+                [0, 2],
+                [1, 2]
+            ]
+        ]
 
-    def change(self, block):
-        hold_block = self.holding
-        self.holding = block
-        if hold_block:
-            hold_block.X = 9
-            hold_block.Y = 0
-        return hold_block
+        name = 'J'
 
-    def draw_holding_block(self):
-        if self.holding == None:
-            return None
+        color = COLOR['blue']
+        super().__init__(shape, name, color)
 
-        self.holding.X = 0
-        self.holding.Y = 0
-        self.holding.draw_mino(0)
-
-class Stack:
+class L_mino(Mino):
     def __init__(self):
-        self.stack_objects = [[] for i in range(25)]
-        self.cleared_line = []
+        shape = [
+            [
+                [2, 0],
+                [0, 1],
+                [1, 1],
+                [2, 1]
+            ],
+            [
+                [1, 0],
+                [1, 1],
+                [1, 2],
+                [2, 2]
+            ],
+            [
+                [0, 1],
+                [1, 1],
+                [2, 1],
+                [0, 2]
+            ],
+            [
+                [0, 0],
+                [1, 0],
+                [1, 1],
+                [1, 2]
+            ]
+        ]
 
-    def add(self, current_block):
-        for block in current_block.mino_to_block():
-            y_line = block["Y"]
-            self.stack_objects[y_line].append({"X" : block["X"], "Y" : y_line, "color" : block["color"]})
+        name = 'L'
 
-    def draw_stack(self):
-        for blockY in self.stack_objects:
-            for block in blockY:
-                if block != []:
-                    pg.draw.rect(screen, block["color"], [block["X"]*BLOCK_SIZE, block["Y"]*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE])
+        color = COLOR['orange']
+        super().__init__(shape, name, color)
 
-    def clear_line(self):
-        c = 0
-        for i, stack_line in enumerate(self.stack_objects):
-            if len(stack_line) > 9:
-                self.stack_objects.pop(i)
-                self.stack_objects.insert(0, [])
-                self.cleared_line.append(i)
-                c += 1
+class S_mino(Mino):
+    def __init__(self):
+        shape = [
+            [
+                [1, 0],
+                [2, 0],
+                [0, 1],
+                [1, 1]
+            ],
+            [
+                [1, 0],
+                [1, 1],
+                [2, 1],
+                [2, 2]
+            ],
+            [
+                [1, 1],
+                [2, 1],
+                [0, 2],
+                [1, 2]
+            ],
+            [
+                [0, 0],
+                [0, 1],
+                [1, 1],
+                [1, 2]
+            ]
+        ]
 
-        for i, stack_line in enumerate(self.stack_objects):
-            for j in range(len(self.stack_objects[i])):
-                self.stack_objects[i][j]["Y"] = i
+        name = 'S'
 
-        return c
+        color = COLOR['green']
+        super().__init__(shape, name, color)
+
+class Z_mino(Mino):
+    def __init__(self):
+        shape = [
+            [
+                [0, 0],
+                [1, 0],
+                [1, 1],
+                [2, 1]
+            ],
+            [
+                [2, 0],
+                [1, 1],
+                [2, 1],
+                [1, 2]
+            ],
+            [
+                [0, 1],
+                [1, 1],
+                [1, 2],
+                [2, 2]
+            ],
+            [
+                [1, 0],
+                [0, 1],
+                [1, 1],
+                [0, 2]
+            ]
+        ]
+
+        name = 'Z'
+
+        color = COLOR['red']
+        super().__init__(shape, name, color)
+
+class T_mino(Mino):
+    def __init__(self):
+        shape = [
+            [
+                [1, 0],
+                [0, 1],
+                [1, 1],
+                [2, 1]
+            ],
+            [
+                [1, 0],
+                [1, 1],
+                [2, 1],
+                [1, 2]
+            ],
+            [
+                [0, 1],
+                [1, 1],
+                [2, 1],
+                [1, 2]
+            ],
+            [
+                [1, 0],
+                [0, 1],
+                [1, 1],
+                [1, 2]
+            ]
+        ]
+
+        name = 'T'
+
+        color = COLOR['purple']
+        super().__init__(shape, name, color)
+
+class O_mino(Mino):
+    def __init__(self):
+        shape = [
+            [
+                [1, 0],
+                [2, 0],
+                [1, 1],
+                [2, 1]
+            ],
+            [
+                [1, 0],
+                [2, 0],
+                [1, 1],
+                [2, 1]
+            ],
+            [
+                [1, 0],
+                [2, 0],
+                [1, 1],
+                [2, 1]
+            ],
+            [
+                [1, 0],
+                [2, 0],
+                [1, 1],
+                [2, 1]
+            ]
+        ]
+
+        name = 'O'
+
+        color = COLOR['yellow']
+        super().__init__(shape, name, color)

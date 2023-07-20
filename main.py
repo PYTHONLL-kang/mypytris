@@ -1,312 +1,192 @@
-import pygame as pg
-from block import Bag, Hold, Stack
+# rule : Mino.state : 0=l_collide, 1=r_collide, 2=b_collide
+
+import pygame as pyg
 import time
-def I_AM_BALD():
-    print("나는 빡빡이다")
 
-pg.init()
+from utillity import Bag, Hold, Stack_manager
+from var import COLOR, BLOCK_SIZE, SCREEN_SIZE, BOARD_SIZE, BOARD_LEFT, BOARD_TOP, KICK_TABLE
 
-black = (0, 0, 0)
-white = (255, 255, 255)
-yellow = (255, 255, 0)
-light_blue = (0, 255, 255)
-purple = (255, 0, 255)
-blue = (30, 128, 255)
-orange = (255, 140, 0)
-green = (0, 221, 0)
-red = (255, 0, 0)
+pyg.init()
 
-BLOCK_SIZE = 25
-DAS = 3
-ADD = 10
+class Environment:
+    def __init__(self):
+        self.clock = pyg.time.Clock()
+        self.screen = pyg.display.set_mode(SCREEN_SIZE)
 
-c_font = pg.font.SysFont("arial", BLOCK_SIZE, True, True)
-# KICK_TABLE = {
-#     "0 1" : [ [ 0,-1], [-1,-1], [ 2, 0], [ 2,-1], [ 0, 0] ],#0 -> 1
-#     "1 0" : [ [ 0, 1], [ 1, 1], [-2, 0], [-2, 1], [ 0, 0] ], #1 -> 0
-#     "1 2" : [ [ 0, 1], [ 1, 1], [-2, 0], [-2, 1], [ 0, 0] ], #1 -> 2
-#     "2 1" : [ [ 0,-1], [-1,-1], [ 2, 0], [ 2,-1], [ 0, 0] ],#2 -> 1
-#     "2 3": [ [ 0, 1], [-1, 1], [ 2, 0], [ 2, 1], [ 0, 0] ], #2 -> 3
-#     "3 2" : [ [ 0,-1], [ 1,-1], [-2, 0], [-2,-1], [ 0, 0] ], #3 -> 2
-#     "3 0" : [ [ 0,-1], [ 1,-1], [-2, 0], [-2,-1], [ 0, 0] ], #3 -> 0
-#     "0 3" : [ [ 0, 1], [-1, 1], [ 2, 0], [ 2, 1], [ 0, 0] ], #0 -> 3
+        self.mino = None
 
-#     "0 2" : [ [-1, 0], [-1, 1], [-1,-1], [ 0, 1], [ 0,-1] ], #0 -> 2
-#     "2 0" : [ [ 1, 0], [ 1,-1], [ 1, 1], [ 0,-1], [ 0, 1] ], #2 -> 0
-#     "1 3" : [ [ 0, 1], [-2, 1], [-1, 1], [-2, 0], [-1, 0] ], #1 -> 3
-#     "3 1" : [ [ 0,-1], [-2,-1], [-1,-1], [-2, 0], [-1, 0] ] #3 -> 1
-#     }
+        self.bag = Bag()
+        self.hold = Hold()
+        self.stack = Stack_manager()
 
-KICK_TABLE = {
-    "0 1" : [ [ 0, 0], [ 0,-1], [-1,-1], [ 2, 0], [ 2,-1], [ 0, 0] ],#0 -> 1
-    "1 0" : [ [ 0, 0], [ 0, 1], [ 1, 1], [-2, 0], [-2, 1], [ 0, 0] ], #1 -> 0
-    "1 2" : [ [ 0, 0], [ 0, 1], [ 1, 1], [-2, 0], [-2, 1], [ 0, 0] ], #1 -> 2
-    "2 1" : [ [ 0, 0], [ 0,-1], [-1,-1], [ 2, 0], [ 2,-1], [ 0, 0] ],#2 -> 1
-    "2 3": [ [ 0, 0], [ 0, 1], [-1, 1], [ 2, 0], [ 2, 1], [ 0, 0] ], #2 -> 3
-    "3 2" : [ [ 0, 0], [ 0,-1], [ 1,-1], [-2, 0], [-2,-1], [ 0, 0] ], #3 -> 2
-    "3 0" : [ [ 0, 0], [ 0,-1], [ 1,-1], [-2, 0], [-2,-1], [ 0, 0] ], #3 -> 0
-    "0 3" : [ [ 0, 0], [ 0, 1], [-1, 1], [ 2, 0], [ 2, 1], [ 0, 0] ], #0 -> 3
+        self.done = False
+        self.time = time.time()
+        self.past_spin = 0
 
-    "0 2" : [ [ 0, 0], [-1, 0], [-1, 1], [-1,-1], [ 0, 1], [ 0,-1] ], #0 -> 2
-    "2 0" : [ [ 0, 0], [ 1, 0], [ 1,-1], [ 1, 1], [ 0,-1], [ 0, 1] ], #2 -> 0
-    "1 3" : [ [ 0, 0], [ 0, 1], [-2, 1], [-1, 1], [-2, 0], [-1, 0] ], #1 -> 3
-    "3 1" : [ [ 0, 0], [ 0,-1], [-2,-1], [-1,-1], [-2, 0], [-1, 0] ] #3 -> 1
-    }
+        self.collision = {
+            (i, j) : True if i == BOARD_LEFT or i == BOARD_SIZE[0]+BOARD_LEFT+1 or j == BOARD_SIZE[1]+BOARD_TOP else False
+            for i in range(BOARD_LEFT, BOARD_SIZE[0]+BOARD_LEFT+2)
+            for j in range(BOARD_TOP-2, BOARD_SIZE[1]+BOARD_TOP+2)
+        }
 
-I_KICK_TABLE = {
-    "0 1" : [ [ 0, 0], [ 0, 1], [ 0, 2], [ 0,-1], [ 1,-1], [-2, 2], [ 0, 1] ], # 0 -> 1
-    "1 0" : [ [ 0, 0], [ 0,-1], [ 0,-2], [ 0, 1], [ 2,-2], [-1, 1], [ 0,-1] ], # 1 -> 0
-    "1 2" : [ [ 0, 0], [ 1, 0], [ 1,-1], [ 1, 2], [-1,-1], [ 2, 2], [ 1, 0] ], # 1 -> 2
-    "2 1" : [ [ 0, 0], [-1, 0], [-1,-2], [-1, 1], [-2,-2], [ 1, 1], [-1, 0] ], # 2 -> 1
-    "2 3" : [ [ 0, 0], [ 0,-1], [ 0, 1], [ 0,-2], [-1, 1], [ 2,-2], [ 0,-1] ], # 2 -> 3
-    "3 2" : [ [ 0, 0], [ 0, 1], [ 0, 2], [ 0,-1], [-2, 2], [ 1,-1], [ 0, 2] ], # 3 -> 2
-    "3 0" : [ [ 0, 0], [-1, 0], [-1, 1], [-1,-2], [ 1, 1], [-2,-2], [-1, 0] ], # 3 -> 0
-    "0 3" : [ [ 0, 0], [ 1, 0], [ 1,-1], [ 1, 2], [ 2, 2], [-1,-1], [ 1, 0] ], # 0 -> 3
+    def key_input(self):
+        key = pyg.key.get_pressed()
+        self.check_collide()
+        if key[pyg.K_ESCAPE]:
+            self.done = True
 
-    "0 2" : [ [ 0, 0], [ 1, 1], [ 0, 1], [ 1, 1], [ 1, 1], [ 1, 1], [ 1, 1] ], # 0 -> 2
-    "2 0" : [ [ 0, 0], [-1,-1], [ 0,-1], [ 1, 1], [ 1, 1], [ 1, 1], [ 1, 1] ], # 2 -> 0
-    "1 3" : [ [ 0, 0], [ 1,-1], [ 1, 0], [ 1, 1], [ 1, 1], [ 1, 1], [ 1, 1] ], # 1 -> 3
-    "3 1" : [ [ 0, 0], [-1, 1], [-1, 0], [ 1, 1], [ 1, 1], [ 1, 1], [ 1, 1] ]  # 3 -> 1
-    }
+        if not self.mino.state[0] and key[pyg.K_LEFT]:
+            self.mino.move(-1, 0)
 
-# 0 1 0
-# 1 0 1
-# 1 2 2
-# 2 1 3
-# 2 3 4
-# 3 2 5
-# 3 0 6
-# 0 3 7
+        if not self.mino.state[1] and key[pyg.K_RIGHT]:
+            self.mino.move(1, 0)
 
-size = [BLOCK_SIZE*22, BLOCK_SIZE*25]
-screen = pg.display.set_mode(size)
+        if not self.mino.state[2] and not self.mino.state[3] and key[pyg.K_DOWN]:
+            self.mino.move(0, 1)
 
-pg.display.set_caption("pytris")
-done = False
-clock = pg.time.Clock()
+        if not self.mino.state[2] and not self.mino.state[3] and self.mino.counter % 30 == 0:
+            self.mino.move(0, 1)
 
-def draw_line():
-    for i in range(20):
-        pg.draw.rect(screen, white, [BLOCK_SIZE*5, BLOCK_SIZE*(2+i), BLOCK_SIZE, BLOCK_SIZE])
-        pg.draw.rect(screen, white, [BLOCK_SIZE*16, BLOCK_SIZE*(2+i), BLOCK_SIZE, BLOCK_SIZE])
-    pg.draw.rect(screen, white, [BLOCK_SIZE*5, BLOCK_SIZE*2, BLOCK_SIZE*11, 1])
-    for i in range(12):
-        pg.draw.rect(screen, white, [BLOCK_SIZE*(5+i), BLOCK_SIZE*22, BLOCK_SIZE, BLOCK_SIZE])
+        if key[pyg.K_x]:
+            self.mino.spining(1)
 
-def check_block_state(mino, x, y, stacks):
-    blocks = mino.mino_to_block()
-    states = []
-    for block in blocks:
-        if block["Y"] + y + 1 == 22:
-            states.append(0)
-        if block["X"] + x - 1 == 5:
-            states.append(1)
-        if block["X"] + x + 1 == 16:
-            states.append(2)
-        
-        if block["X"] + x == 16 or block["X"] + x == 5 or block["Y"] + y == 22:
-            states.append(3)
+        if key[pyg.K_z]:
+            self.mino.spining(-1)
 
-        for stack_line in stacks:
-            if stack_line == []:
-                continue
-            for stack in stack_line:
-                if block["Y"] + y == stack["Y"]:
-                    if block["X"] + x - 1 == stack["X"]:
-                        states.append(1)
-                    if block["X"] + x + 1 == stack["X"]:
-                        states.append(2)
+        if key[pyg.K_a]:
+            self.mino.spining(2)
 
-                if block["X"] + x == stack["X"]:
-                    if block["Y"] - y + 1 == stack["Y"]:
-                        states.append(0)
+        if key[pyg.K_x] or key[pyg.K_z] or key[pyg.K_a]:
+            time.sleep(0.1)
+            self.srs_system()
 
-                    if block["Y"] + y == stack["Y"]:
-                        states.append(3)
+        if key[pyg.K_SPACE]:
+            self.hard_drop()
 
-    return states
+        if key[pyg.K_LSHIFT] and not self.hold.is_hold:
+            self.mino = self.hold.change(self.mino)
+            if self.mino is None:
+                self.mino = self.bag.pop_()
 
-# def srs_system(p_s, c_s, mino, stacks):
-#     try:
-#         KICK_TABLE[f"{p_s} {c_s}"]
-#     except KeyError:
-#         return c_s
+        if self.mino.state[2]:
+            time.sleep(0.01)
+            self.stack.add(self.mino)
+            self.add_collision()
 
-#     # mino.spin = p_s
-#     for y_m, x_m in KICK_TABLE[f"{p_s} {c_s}"]:
-#         states = check_block_state(mino, stacks)
-#         print(states)
-#         if len(states) == 0:
-#             return c_s
+            line = self.stack.clear_line()
+            self.delete_collision(line)
+            self.mino = self.bag.pop_()
+            self.hold.is_hold = False
+            self.past_spin = 0
 
-#         mino.move(x_m, y_m)
-#     print("back")
-#     return p_s
+        for i in range(3):
+            self.mino.state[i] = False
 
-def initiate():
-    """
-    return x, y, holding, spin, pas_spin, add_time
-    """
-    return 9, 0, False, 0, 0, 0
+    def srs_system(self):
+        for x_m, y_m in KICK_TABLE[(self.past_spin, self.mino.spin)]:
+            print(self.check_collide())
+            if not self.check_collide():
+                break
+            self.mino.move(x_m, y_m)
 
-bag = Bag()
-hold = Hold()
-stacks_objects = Stack()
+        self.past_spin = self.mino.spin
 
-current_block = bag.pop_()
+    def hard_drop(self):
+        while not self.mino.state[3]:
+            self.mino.move(0, 1)
+            self.check_collide()
 
-x, y, holding, spin, pas_spin, add_time = initiate()
+        self.mino.state[3] = False
+        self.mino.state[2] = True
 
-spin_cnt = 0
+    def add_collision(self):
+        for block in self.mino.to_object():
+            self.collision[(block['x'], block['y'])] = True
 
-cnt = 0
+    def delete_collision(self, line):
+        for y in line:
+            for i in range(BOARD_LEFT+1, BOARD_LEFT+BOARD_SIZE[0]+1):
+                for _y in range(BOARD_TOP, y+1):
+                    if self.collision[(i, _y)]:
+                        self.collision[(i, _y)] = False
+                        break
 
-direction = 0
-das_time = 0
-das_cnt = 0
+    def check_collide(self):
+        for block in self.mino.to_object():
+            try:
+                if self.collision[(block['x']-1, block['y'])]:
+                    self.mino.state[0] = True
 
-count_d_line = 0
+                if self.collision[(block['x']+1, block['y'])]:
+                    self.mino.state[1] = True
 
-while not done:
-    print(das_time, das_cnt)
-    clock.tick(20)
-    screen.fill(black)
+                if not self.mino.state[3] and self.collision[(block['x'], block['y']+1)]:
+                    self.mino.state[3] = True
+                    self.time = time.time()
 
-    for event in pg.event.get():
-        if event.type == pg.QUIT:
-            done = True
-        if event.type == pg.KEYDOWN:
-            das_cnt = 1
-        elif event.type == pg.KEYUP:
-            das_cnt = 0
+                if self.collision[(block['x'], block['y'])]:
+                    return True
 
-    if das_cnt == 1:
-        das_time += 1
-    else:
-        das_time = 0
+            except KeyError:
+                return True
+            
+        if self.mino.state[3] and time.time() - self.time > 1:
+            self.hard_drop()
 
-    key = pg.key.get_pressed()
-    if key[pg.K_x] or key[pg.K_z] or key[pg.K_a]:
-        spin_cnt += 1
-    
-    if spin_cnt > 1:
-        pas_spin = spin
-        if key[pg.K_x]:
-            spin += 1
-        elif key[pg.K_z]:
-            spin -= 1
-        elif key[pg.K_a]:
-            spin += 2
-        spin_cnt = 0
+        if self.mino.state[3]:
+            self.time = time.time()
 
-    if spin > 3:
-        spin -= 4
-    if spin < 0:
-        spin = spin + 4
+        return False
 
-    # spin = srs_system(pas_spin, spin, current_block, stacks_objects.stack_objects)
+    def block_render(self, obj):
+        for mino in obj:
+            for block in mino:
+                pyg.draw.rect(self.screen, block['color'], [block['x'] * BLOCK_SIZE, block['y'] * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE])
 
-    if pas_spin != spin:
-        if current_block.color != light_blue:
-            for y_m, x_m in KICK_TABLE[f"{pas_spin} {spin}"]:
-                x = x + x_m
-                y = y + y_m
+    def show_render(self):
+        for i, mino in enumerate(self.bag.shows):
+            for block in mino.to_object():
+                pyg.draw.rect(self.screen, block['color'], [(block['x']-BOARD_LEFT+BOARD_SIZE[0]+2) * BLOCK_SIZE, (block['y']+2+i*3) * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE])
 
-                srs_state = check_block_state(current_block, x_m, y_m, stacks_objects.stack_objects)
-                srs_is_3 = any(state == 3 for state in srs_state)
+    def board_render(self):
+        for i in range(BOARD_SIZE[1] + 1): # left, right
+            pyg.draw.rect(self.screen, COLOR['white'], [BLOCK_SIZE*BOARD_LEFT, BLOCK_SIZE*(BOARD_TOP+i), BLOCK_SIZE, BLOCK_SIZE])
+            pyg.draw.rect(self.screen, COLOR['white'], [BLOCK_SIZE*(BOARD_LEFT+BOARD_SIZE[0]+1), BLOCK_SIZE*(BOARD_TOP+i), BLOCK_SIZE, BLOCK_SIZE])
 
-                if not srs_is_3:
-                    break
+        for i in range(BOARD_SIZE[0] + 2): # bottom
+            pyg.draw.rect(self.screen, COLOR['white'], [BLOCK_SIZE*(BOARD_LEFT+i), BLOCK_SIZE*(BOARD_TOP + BOARD_SIZE[1]), BLOCK_SIZE, BLOCK_SIZE])
 
-                else:
-                    x = x - x_m
-                    y = y - y_m
+        pyg.draw.rect(self.screen, COLOR['grey'], [BLOCK_SIZE*BOARD_LEFT, BLOCK_SIZE*BOARD_TOP, BLOCK_SIZE*(BOARD_SIZE[0]+2), 1]) # top
 
-                # if y_m == 0 and x_m == 0:
-                #     spin = pas_spin
-        
-        else:
-            for y_m, x_m in I_KICK_TABLE[f"{pas_spin} {spin}"]:
-                x = x + x_m
-                y = y + y_m
+        for i in range(5):
+            pyg.draw.rect(self.screen, COLOR['white'], [BLOCK_SIZE*(BOARD_LEFT+BOARD_SIZE[0]+2), BLOCK_SIZE*(BOARD_TOP+i*3), BLOCK_SIZE*4, BLOCK_SIZE*3], 1)
 
-                srs_state = check_block_state(current_block, x_m, y_m, stacks_objects.stack_objects)
-                srs_is_3 = any(state == 3 for state in srs_state)
+        pyg.draw.rect(self.screen, COLOR['white'], [BLOCK_SIZE*0, BLOCK_SIZE*BOARD_TOP, BLOCK_SIZE*4, BLOCK_SIZE*3], 1)
 
-                if not srs_is_3:
-                    break
+    def main(self):
+        pyg.display.set_caption('pytris')
 
-                else:
-                    x = x - x_m
-                    y = y - y_m
+        self.mino = self.bag.pop_()
 
-        current_block.go_to(x, y)
+        while not self.done:
+            self.clock.tick(20)
+            self.screen.fill(color=COLOR['black'])
 
-    collide_states = check_block_state(current_block, 0, 0, stacks_objects.stack_objects)
-    # print(states)
-    is_0 = any(state == 0 for state in collide_states)
-    is_1 = any(state == 1 for state in collide_states)
-    is_2 = any(state == 2 for state in collide_states)
-    is_3 = any(state == 3 for state in collide_states)
+            for event in pyg.event.get():
+                if event.type == pyg.QUIT:
+                    self.done = True
 
-    if not is_0 and (key[pg.K_DOWN] or cnt % 20 == 20):
-        y += 1
+            self.key_input()
 
-    # if is_0:
-    #     add_time += 1
+            self.block_render(self.stack.stack_objects + [self.mino.to_object()])
+            self.show_render()
+            self.board_render()
 
-    if not is_1 and key[pg.K_LEFT]:
-        direction = -1
-    elif not is_2 and key[pg.K_RIGHT]:
-        direction = 1
-    else:
-        direction = 0
+            if self.hold.holding is not None:
+                self.block_render(self.hold.holding_block())
 
-    if das_time == DAS:
-        if direction == 1:
-            x = 13
-        if direction == -1:
-            x = 6
+            pyg.display.flip()
+            self.mino.counter += 1
 
-        das_time = 0
-    else:
-        x += direction
-
-    # if das_cnt > 0:
-    #     das_cnt = 0
-    #     das_time = 0
-
-    if (key[pg.K_LSHIFT] or key[pg.K_c]) and not holding:
-        current_block = hold.change(current_block)
-        holding = True
-        if current_block is None:
-            current_block = bag.pop_()
-
-        spin = 0
-        x = 9
-        y = 0
-        spin = 0
-        pas_spin = 0
-
-    if key[pg.K_SPACE] and is_0:
-        add_time = 100
-        time.sleep(0.1)
-
-    current_block.go_to(x, y)
-    current_block.draw_mino(spin)
-    stacks_objects.draw_stack()
-    count_d_line += stacks_objects.clear_line()
-    hold.draw_holding_block()
-    draw_line()
-
-    if add_time > ADD:
-        stacks_objects.add(current_block)
-        current_block = bag.pop_()
-
-        x, y, holding, spin, pas_spin, add_time = initiate()
-
-    cnt += 1
-    text = c_font.render(str(count_d_line), True, white, black)
-    screen.blit(text, (BLOCK_SIZE*11, BLOCK_SIZE*23))
-    # time.sleep(0.01)
-    pg.display.flip()
+game = Environment()
+game.main()
