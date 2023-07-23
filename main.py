@@ -12,6 +12,7 @@ class Environment:
     def __init__(self):
         self.clock = pyg.time.Clock()
         self.screen = pyg.display.set_mode(SCREEN_SIZE)
+        self.font = pyg.font.SysFont('arial', BLOCK_SIZE, True, True)
 
         self.mino = None
 
@@ -22,6 +23,7 @@ class Environment:
         self.done = False
         self.time = time.time()
         self.past_spin = 0
+        self.cleard_line = 0
 
         self.collision = {
             (i, j) : True if i == BOARD_LEFT or i == BOARD_SIZE[0]+BOARD_LEFT+1 or j == BOARD_SIZE[1]+BOARD_TOP else False
@@ -78,6 +80,8 @@ class Environment:
             self.mino = self.bag.pop_()
             self.hold.is_hold = False
             self.past_spin = 0
+
+            self.cleard_line += len(line)
 
         for i in range(3):
             self.mino.state[i] = False
@@ -166,6 +170,7 @@ class Environment:
     def main(self):
         pyg.display.set_caption('pytris')
 
+        start_time = int(time.time())
         self.mino = self.bag.pop_()
 
         while not self.done:
@@ -184,6 +189,13 @@ class Environment:
 
             if self.hold.holding is not None:
                 self.block_render(self.hold.holding_block())
+
+            text = self.font.render(str(self.cleard_line), True, COLOR['white'], COLOR['black'])
+            self.screen.blit(text, (BLOCK_SIZE*(BOARD_LEFT+BOARD_SIZE[0]//2), BLOCK_SIZE*(BOARD_TOP+BOARD_SIZE[1]+2)))
+
+            sec = int(time.time()) - start_time
+            sec_text = self.font.render('{0}:{1}'.format(sec//60, sec%60), True, COLOR['white'], COLOR['black'])
+            self.screen.blit(sec_text, (0, 0))
 
             pyg.display.flip()
             self.mino.counter += 1
