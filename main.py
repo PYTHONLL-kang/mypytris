@@ -4,7 +4,7 @@ import pygame as pyg
 import time
 
 from utillity import Bag, Hold, Stack_manager
-from var import COLOR, BLOCK_SIZE, SCREEN_SIZE, BOARD_SIZE, BOARD_LEFT, BOARD_TOP, KICK_TABLE
+from var import COLOR, BLOCK_SIZE, SCREEN_SIZE, BOARD_SIZE, BOARD_LEFT, BOARD_TOP, KICK_TABLE, I_KICK_TABLE
 
 pyg.init()
 
@@ -43,11 +43,12 @@ class Environment:
         if not self.mino.state[1] and key[pyg.K_RIGHT]:
             self.mino.move(1, 0)
 
-        if not self.mino.state[2] and not self.mino.state[3] and key[pyg.K_DOWN]:
-            self.mino.move(0, 1)
-
-        if not self.mino.state[2] and not self.mino.state[3] and self.mino.counter % 30 == 0:
-            self.mino.move(0, 1)
+        if not self.mino.state[3]:
+            if key[pyg.K_DOWN]:
+                self.mino.move(0, 1)
+            
+            if self.mino.counter % 30 == 0:
+                self.mino.move(0, 1)
 
         if key[pyg.K_x]:
             self.mino.spining(1)
@@ -70,25 +71,24 @@ class Environment:
             if self.mino is None:
                 self.mino = self.bag.pop_()
 
-        if self.mino.state[2]:
-            time.sleep(0.01)
-            self.stack.add(self.mino)
-            self.add_collision()
+        if not self.mino.state[3]:
+            self.time = time.time()
 
-            line = self.stack.clear_line()
-            self.delete_collision(line)
-            self.mino = self.bag.pop_()
-            self.hold.is_hold = False
-            self.past_spin = 0
+        elif time.time() - self.time > 1:
+            self.hard_drop()
 
-            self.cleard_line += len(line)
-
-        for i in range(3):
+        for i in range(4):
             self.mino.state[i] = False
 
     def srs_system(self):
-        for x_m, y_m in KICK_TABLE[(self.past_spin, self.mino.spin)]:
-            print(self.check_collide())
+        if self.mino.name == 'I':
+            kick_table = I_KICK_TABLE
+            print()
+
+        else:
+            kick_table = KICK_TABLE
+
+        for x_m, y_m in kick_table[(self.past_spin, self.mino.spin)]:
             if not self.check_collide():
                 break
             self.mino.move(x_m, y_m)
@@ -100,8 +100,17 @@ class Environment:
             self.mino.move(0, 1)
             self.check_collide()
 
-        self.mino.state[3] = False
-        self.mino.state[2] = True
+        time.sleep(0.01)
+        self.stack.add(self.mino)
+        self.add_collision()
+
+        line = self.stack.clear_line()
+        self.delete_collision(line)
+        self.mino = self.bag.pop_()
+        self.hold.is_hold = False
+        self.past_spin = 0
+
+        self.cleard_line += len(line)
 
     def add_collision(self):
         for block in self.mino.to_object():
@@ -124,21 +133,14 @@ class Environment:
                 if self.collision[(block['x']+1, block['y'])]:
                     self.mino.state[1] = True
 
-                if not self.mino.state[3] and self.collision[(block['x'], block['y']+1)]:
+                if self.collision[(block['x'], block['y']+1)]:
                     self.mino.state[3] = True
-                    self.time = time.time()
 
                 if self.collision[(block['x'], block['y'])]:
                     return True
 
             except KeyError:
                 return True
-            
-        if self.mino.state[3] and time.time() - self.time > 1:
-            self.hard_drop()
-
-        if self.mino.state[3]:
-            self.time = time.time()
 
         return False
 
